@@ -1,23 +1,40 @@
+"""
+ALPHA Speech Engine
+Fixed: reinitializes engine each call to avoid threading crashes
+"""
+
 import pyttsx3
-import threading
-
-engine = pyttsx3.init()
-lock = threading.Lock()  # 🔐 Lock to prevent simultaneous access
-
-def list_voices():
-    voices = engine.getProperty('voices')
-    print("🔊 Available Voices:")
-    for idx, voice in enumerate(voices):
-        print(f"{idx}: {voice.name} - {voice.languages} - {voice.id}")
 
 def speak(text):
-    with lock:  # ⛓️ Ensures only one thread uses the engine at a time
-        engine.setProperty('rate', 170)
+    """Speak text out loud — thread-safe version"""
+    try:
+        engine = pyttsx3.init()
+        engine.setProperty('rate', 165)
         engine.setProperty('volume', 1.0)
+
+        # Pick a better voice if available
+        voices = engine.getProperty('voices')
+        for voice in voices:
+            if 'david' in voice.name.lower() or 'mark' in voice.name.lower():
+                engine.setProperty('voice', voice.id)
+                break
+
+        print(f"[Alpha speaks]: {text}")
         engine.say(text)
         engine.runAndWait()
+        engine.stop()
+    except Exception as e:
+        print(f"[Speech Error] {e}")
 
-# Optional testing
+def list_voices():
+    """List all available voices"""
+    engine = pyttsx3.init()
+    voices = engine.getProperty('voices')
+    print("Available Voices:")
+    for idx, voice in enumerate(voices):
+        print(f"  {idx}: {voice.name} — {voice.id}")
+    engine.stop()
+
 if __name__ == "__main__":
     list_voices()
-    speak("Hello. This is a test of the voice engine.")
+    speak("Hello Shaun! Alpha speech engine is working correctly.")
