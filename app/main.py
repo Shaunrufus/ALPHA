@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-ALPHA Voice Assistant - Main Application
-Now with Groq brain — intelligent responses like Siri/Alexa
+ALPHA Voice Assistant
+Stays active until silence - like Siri/Alexa
 """
 
 import sys
@@ -15,102 +15,99 @@ from modules.wakeword_listener import start_wake_word_detection, stop_wake_word_
 from modules.voice_listener import listen_for_command
 from modules.brain import think, get_friendly_greeting, clear_memory
 
+# Go to sleep after this many seconds of silence
+SILENCE_TIMEOUT = 45
+
+is_in_conversation = False
+
 
 def handle_action(action: dict):
-    """
-    Handle PC actions returned by the brain.
-    For now these are placeholders — Phase 3 connects to PC Bridge.
-    """
     action_type = action.get("action", "")
-
     if action_type == "screenshot":
         speak("Taking a screenshot for you.")
-        # TODO Phase 3: call PC Bridge /screenshot
         print("[Action] Screenshot requested")
-
     elif action_type == "open_app":
-        app = action.get("app", "that app")
+        app = action.get("app", "that")
         speak(f"Opening {app} for you.")
-        # TODO Phase 3: call PC Bridge /shell
-        print(f"[Action] Open app: {app}")
-
     elif action_type == "time":
-        current_time = time.strftime("%I:%M %p")
-        speak(f"It's {current_time}")
-
+        speak(f"It's {time.strftime('%I:%M %p')}")
     elif action_type == "date":
-        current_date = time.strftime("%B %d, %Y")
-        speak(f"Today is {current_date}")
-
+        speak(f"Today is {time.strftime('%B %d, %Y')}")
     else:
-        speak("I understood the command but that action isn't set up yet.")
-        print(f"[Action] Unknown action: {action}")
+        speak("I understood but that action isn't set up yet.")
 
 
 def process_command(command: str) -> bool:
-    """
-    Process a voice command through the Groq brain.
-    Returns False to exit, True to keep running.
-    """
+    """Returns False to sleep, True to keep listening"""
     if not command or not command.strip():
-        speak("Sorry, I didn't catch that. Try again.")
-        return True
+        return True  # silence — don't reply, just keep waiting
 
     command_lower = command.lower().strip()
 
-    # Exit commands
-    if any(word in command_lower for word in ["goodbye alpha", "bye alpha", "shut down", "stop alpha"]):
-        speak("Goodbye Shaun! Talk soon.")
+    # Sleep commands
+    if any(p in command_lower for p in ["goodbye alpha", "bye alpha", "stop alpha", "go to sleep", "goodbye", "bye"]):
+        speak("Going to sleep. Say Hey Jarvis when you need me!")
         return False
 
-    # Clear memory command
+    # Clear memory
     if "forget everything" in command_lower or "clear memory" in command_lower:
         clear_memory()
-        speak("Done, I've cleared my memory. Fresh start!")
+        speak("Done, fresh start!")
         return True
 
-    print(f"[Alpha] Thinking about: {command}")
-
-    # Send to Groq brain
+    print(f"[Alpha] Thinking: {command}")
     reply, action = think(command)
 
     if action:
         handle_action(action)
     elif reply:
         speak(reply)
-    else:
-        speak("I'm not sure what to do with that.")
 
     return True
 
 
-def command_callback():
-    """Called when wake word is detected"""
-    # Friendly random greeting like Siri
-    greeting = get_friendly_greeting()
-    speak(greeting)
+def conversation_mode():
+    """Stay active until silence timeout or goodbye"""
+    global is_in_conversation
+    is_in_conversation = True
 
-    # Listen for the actual command
-    command = listen_for_command()
+    speak(get_friendly_greeting())
 
-    # Process it
-    result = process_command(command)
-    return result
+    last_spoke = time.time()
+
+    while is_in_conversation:
+        # Check silence timeout
+        silence_duration = time.time() - last_spoke
+        remaining = int(SILENCE_TIMEOUT - silence_duration)
+
+        if silence_duration > SILENCE_TIMEOUT:
+            speak("Going to sleep. Say Hey Jarvis when you need me!")
+            break
+
+        print(f"[Alpha] Listening... (sleeping in {remaining}s of silence)")
+        command = listen_for_command()
+
+        if command and command.strip():
+            last_spoke = time.time()  # reset timer when user speaks
+            should_continue = process_command(command)
+            if not should_continue:
+                break
+        # if empty/silence - just loop back, timer keeps counting
+
+    is_in_conversation = False
+    print("[Alpha] Sleeping. Say 'Hey Jarvis' to wake me.")
 
 
 def main():
-    """Main application loop"""
     print("=" * 50)
-    print("   ALPHA Voice Assistant — Starting Up")
+    print("   ALPHA Voice Assistant")
     print("=" * 50)
 
-    speak("Hey Shaun! Alpha is ready. Just say Alpha to wake me up.")
-
-    # Start wake word detection
-    start_wake_word_detection(command_callback)
+    speak("Hey Shaun! Alpha is ready. Say Hey Jarvis to wake me up.")
+    start_wake_word_detection(conversation_mode)
 
     try:
-        print("\n🎧 Say 'Alpha' to activate... (Ctrl+C to quit)\n")
+        print("\n🎧 Say 'Hey Jarvis' to activate... (Ctrl+C to quit)\n")
         while True:
             time.sleep(1)
     except KeyboardInterrupt:

@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>ALPHA</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --border: #1e1e2e;
+    --accent: #7c6aff;
+    --accent2: #a78bfa;
+    --text: #e2e2f0;
+    --muted: #6b6b8a;
+    --green: #4ade80;
+    --red: #f87171;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    font-family: 'Outfit', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* Ambient background */
+  body::before {
+    content: '';
+    position: fixed;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(ellipse at 30% 20%, rgba(124,106,255,0.08) 0%, transparent 50%),
+                radial-gradient(ellipse at 70% 80%, rgba(167,139,250,0.05) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .header {
+    padding: 20px 24px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: relative;
+    z-index: 1;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .logo-orb {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    box-shadow: 0 0 16px rgba(124,106,255,0.5);
+    animation: pulse-orb 3s ease-in-out infinite;
+  }
+
+  @keyframes pulse-orb {
+    0%, 100% { box-shadow: 0 0 16px rgba(124,106,255,0.5); }
+    50% { box-shadow: 0 0 28px rgba(124,106,255,0.8); }
+  }
+
+  .logo-name { font-size: 18px; font-weight: 600; letter-spacing: 3px; color: var(--text); }
+
+  .status-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--green);
+    animation: blink 2s ease-in-out infinite;
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  /* Chat area */
+  .chat-area {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    position: relative;
+    z-index: 1;
+    scroll-behavior: smooth;
+  }
+
+  .chat-area::-webkit-scrollbar { display: none; }
+
+  .message {
+    max-width: 82%;
+    padding: 12px 16px;
+    border-radius: 18px;
+    font-size: 14px;
+    line-height: 1.5;
+    animation: slide-up 0.25s ease;
+  }
+
+  @keyframes slide-up {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .message.user {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: white;
+    align-self: flex-end;
+    border-bottom-right-radius: 4px;
+  }
+
+  .message.alpha {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    align-self: flex-start;
+    border-bottom-left-radius: 4px;
+  }
+
+  .message.alpha .speaker {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    color: var(--accent2);
+    margin-bottom: 4px;
+  }
+
+  .thinking {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    padding: 14px 16px;
+  }
+
+  .thinking span {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: bounce 1.2s ease-in-out infinite;
+  }
+
+  .thinking span:nth-child(2) { animation-delay: 0.2s; }
+  .thinking span:nth-child(3) { animation-delay: 0.4s; }
+
+  @keyframes bounce {
+    0%, 100% { transform: translateY(0); opacity: 0.4; }
+    50% { transform: translateY(-6px); opacity: 1; }
+  }
+
+  /* Bottom controls */
+  .bottom {
+    padding: 12px 16px 28px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .server-input {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .server-input input {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 8px 14px;
+    border-radius: 10px;
+    font-family: 'Outfit', sans-serif;
+    font-size: 12px;
+    outline: none;
+  }
+
+  .server-input input:focus { border-color: var(--accent); }
+
+  .connect-btn {
+    background: var(--surface);
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    padding: 8px 16px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-family: 'Outfit', sans-serif;
+    cursor: pointer;
+  }
+
+  .input-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .text-input {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 14px 18px;
+    border-radius: 14px;
+    font-family: 'Outfit', sans-serif;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .text-input:focus { border-color: var(--accent); }
+  .text-input::placeholder { color: var(--muted); }
+
+  .send-btn {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border: none;
+    color: white;
+    font-size: 18px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.15s, opacity 0.15s;
+    flex-shrink: 0;
+  }
+
+  .send-btn:active { transform: scale(0.92); }
+  .send-btn:disabled { opacity: 0.4; }
+
+  /* Mic button */
+  .mic-btn {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    flex-shrink: 0;
+    position: relative;
+  }
+
+  .mic-btn.recording {
+    background: rgba(248,113,113,0.15);
+    border-color: var(--red);
+    color: var(--red);
+    animation: pulse-mic 1s ease-in-out infinite;
+  }
+
+  @keyframes pulse-mic {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(248,113,113,0.3); }
+    50% { box-shadow: 0 0 0 8px rgba(248,113,113,0); }
+  }
+
+  .offline-notice {
+    text-align: center;
+    color: var(--muted);
+    font-size: 11px;
+    margin-bottom: 8px;
+    display: none;
+  }
+
+  .offline-notice.show { display: block; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">
+    <div class="logo-orb"></div>
+    <div class="logo-name">ALPHA</div>
+  </div>
+  <div class="status-pill">
+    <div class="status-dot" id="statusDot"></div>
+    <span id="statusText">connecting...</span>
+  </div>
+</div>
+
+<div class="chat-area" id="chatArea">
+  <div class="message alpha">
+    <div class="speaker">ALPHA</div>
+    Hey Shaun! I'm ready. Type or tap the mic to talk.
+  </div>
+</div>
+
+<div class="bottom">
+  <div class="server-input">
+    <input type="text" id="serverUrl" placeholder="Alpha server URL" value="http://192.168.29.3:8766">
+    <button class="connect-btn" onclick="checkConnection()">Connect</button>
+  </div>
+  <div class="offline-notice" id="offlineNotice">⚠️ Alpha server offline — check if alpha_server.py is running</div>
+  <div class="input-row">
+    <button class="mic-btn" id="micBtn" onclick="toggleMic()">🎤</button>
+    <input class="text-input" id="textInput" placeholder="Ask Alpha anything..." 
+           onkeydown="if(event.key==='Enter') sendText()">
+    <button class="send-btn" id="sendBtn" onclick="sendText()">↑</button>
+  </div>
+</div>
+
+<script>
+let serverUrl = localStorage.getItem('alphaServer') || 'http://192.168.29.3:8766';
+let isRecording = false;
+let mediaRecorder = null;
+let audioChunks = [];
+let connected = false;
+
+document.getElementById('serverUrl').value = serverUrl;
+
+// Check connection on load
+window.onload = () => checkConnection();
+
+async function checkConnection() {
+  serverUrl = document.getElementById('serverUrl').value.trim();
+  localStorage.setItem('alphaServer', serverUrl);
+  try {
+    const res = await fetch(serverUrl + '/health', { signal: AbortSignal.timeout(3000) });
+    if (res.ok) {
+      setStatus(true);
+    } else {
+      setStatus(false);
+    }
+  } catch {
+    setStatus(false);
+  }
+}
+
+function setStatus(online) {
+  connected = online;
+  const dot = document.getElementById('statusDot');
+  const txt = document.getElementById('statusText');
+  const notice = document.getElementById('offlineNotice');
+  dot.style.background = online ? 'var(--green)' : 'var(--red)';
+  txt.textContent = online ? 'online' : 'offline';
+  notice.classList.toggle('show', !online);
+}
+
+function addMessage(text, role) {
+  const chat = document.getElementById('chatArea');
+  const div = document.createElement('div');
+  div.className = 'message ' + role;
+  if (role === 'alpha') {
+    div.innerHTML = '<div class="speaker">ALPHA</div>' + text;
+  } else {
+    div.textContent = text;
+  }
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+  return div;
+}
+
+function showThinking() {
+  const chat = document.getElementById('chatArea');
+  const div = document.createElement('div');
+  div.className = 'message alpha';
+  div.id = 'thinking';
+  div.innerHTML = '<div class="thinking"><span></span><span></span><span></span></div>';
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function hideThinking() {
+  const t = document.getElementById('thinking');
+  if (t) t.remove();
+}
+
+async function sendMessage(text) {
+  if (!text.trim()) return;
+  if (!connected) {
+    await checkConnection();
+    if (!connected) {
+      addMessage("Can't reach Alpha server. Make sure alpha_server.py is running on your PC.", 'alpha');
+      return;
+    }
+  }
+
+  addMessage(text, 'user');
+  showThinking();
+
+  try {
+    const res = await fetch(serverUrl + '/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: text, source: 'mobile' })
+    });
+
+    const data = await res.json();
+    hideThinking();
+    addMessage(data.reply, 'alpha');
+
+    // Play audio if available
+    if (data.audio) {
+      const audioData = atob(data.audio);
+      const buf = new Uint8Array(audioData.length);
+      for (let i = 0; i < audioData.length; i++) buf[i] = audioData.charCodeAt(i);
+      const blob = new Blob([buf], { type: 'audio/wav' });
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      audio.play();
+    }
+  } catch (e) {
+    hideThinking();
+    addMessage('Connection lost. Check your PC.', 'alpha');
+    setStatus(false);
+  }
+}
+
+async function sendText() {
+  const input = document.getElementById('textInput');
+  const text = input.value.trim();
+  input.value = '';
+  if (text) await sendMessage(text);
+}
+
+async function toggleMic() {
+  if (isRecording) {
+    stopRecording();
+  } else {
+    startRecording();
+  }
+}
+
+async function startRecording() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    mediaRecorder = new MediaRecorder(stream);
+    audioChunks = [];
+
+    mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+    mediaRecorder.onstop = async () => {
+      const blob = new Blob(audioChunks, { type: 'audio/webm' });
+      await transcribeAudio(blob);
+      stream.getTracks().forEach(t => t.stop());
+    };
+
+    mediaRecorder.start();
+    isRecording = true;
+    document.getElementById('micBtn').classList.add('recording');
+    document.getElementById('micBtn').textContent = '⏹';
+  } catch(e) {
+    addMessage('Microphone access denied. Please allow mic permissions.', 'alpha');
+  }
+}
+
+function stopRecording() {
+  if (mediaRecorder && isRecording) {
+    mediaRecorder.stop();
+    isRecording = false;
+    document.getElementById('micBtn').classList.remove('recording');
+    document.getElementById('micBtn').textContent = '🎤';
+  }
+}
+
+async function transcribeAudio(blob) {
+  // Use browser's Web Speech API for transcription on mobile
+  addMessage('🎤 Processing voice...', 'user');
+  
+  // If Web Speech API available use it
+  if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'en-US';
+    recognition.onresult = async (e) => {
+      const text = e.results[0][0].transcript;
+      // Remove the "processing" message
+      const msgs = document.querySelectorAll('.message.user');
+      msgs[msgs.length-1].remove();
+      await sendMessage(text);
+    };
+    recognition.onerror = () => {
+      addMessage("Couldn't understand audio. Try again.", 'alpha');
+    };
+    recognition.start();
+  } else {
+    addMessage("Voice not supported on this browser. Use Chrome.", 'alpha');
+  }
+}
+
+// Re-check connection every 30s
+setInterval(checkConnection, 30000);
+</script>
+</body>
+</html>

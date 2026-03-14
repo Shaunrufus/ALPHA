@@ -1,80 +1,58 @@
 """
 ALPHA Wakeword Listener
-Real audio-based wake word detection using faster-whisper
-Listens in short 2-second chunks, triggers when "alpha" is detected
-No extra packages needed — reuses Whisper already installed
+Uses openwakeword with hey_jarvis model - free forever, no API key
+Say "Hey Jarvis" to activate Alpha
 """
 
 import threading
 import numpy as np
 import sounddevice as sd
-from faster_whisper import WhisperModel
+import openwakeword
+from openwakeword.model import Model
 
-# Use tiny model for wakeword — very fast, low resource
-print("[Wakeword] Loading tiny Whisper model for wake detection...")
-_wake_model = WhisperModel("tiny.en", compute_type="int8")
-print("[Wakeword] Ready.")
+print("[Wakeword] Loading Hey Jarvis model...")
+_oww_model = Model(wakeword_models=["hey_jarvis"], inference_framework="onnx")
+print("[Wakeword] Ready. Say 'Hey Jarvis' to activate Alpha.")
 
 SAMPLE_RATE = 16000
-WAKE_CHUNK_SECONDS = 2  # Listen in 2-second chunks
+CHUNK_SIZE = 1280  # 80ms chunks - openwakeword requirement
 
 wakeword_active = False
 wakeword_thread = None
 
 
-def _record_chunk(seconds=WAKE_CHUNK_SECONDS):
-    """Record a short audio chunk and return as numpy array"""
-    audio = sd.rec(
-        int(seconds * SAMPLE_RATE),
-        samplerate=SAMPLE_RATE,
-        channels=1,
-        dtype='float32'
-    )
-    sd.wait()
-    return audio.squeeze()
-
-
-def _contains_wakeword(audio_np):
-    """Check if audio contains the wake word 'alpha'"""
-    segments, _ = _wake_model.transcribe(
-        audio_np,
-        beam_size=1,        # Fast
-        language="en",
-        condition_on_previous_text=False
-    )
-    text = " ".join([s.text for s in segments]).lower().strip()
-    if text:
-        print(f"[Wakeword heard]: {text}")
-    return "alpha" in text
-
-
 def _wakeword_loop(trigger_callback):
-    """Continuously listen for wake word in background"""
     global wakeword_active
-    print("[Wakeword] Listening for 'Alpha'...")
 
-    while wakeword_active:
-        try:
-            audio = _record_chunk()
+    print("[Wakeword] Listening for 'Hey Jarvis'...")
 
-            # Skip silent chunks (saves processing)
-            if np.abs(audio).mean() < 0.001:
+    with sd.InputStream(samplerate=SAMPLE_RATE, channels=1,
+                        dtype='int16', blocksize=CHUNK_SIZE) as stream:
+        while wakeword_active:
+            try:
+                audio_chunk, _ = stream.read(CHUNK_SIZE)
+                audio_np = audio_chunk.squeeze()
+
+                # Feed to openwakeword
+                prediction = _oww_model.predict(audio_np)
+
+                # Check if hey_jarvis confidence is high enough
+                for model_name, score in prediction.items():
+                    if score > 0.5:
+                        print(f"[Wakeword] ✅ Detected! (score: {score:.2f})")
+                        wakeword_active = False
+                        _oww_model.reset()
+                        trigger_callback()
+                        wakeword_active = True
+                        print("[Wakeword] Back to listening for 'Hey Jarvis'...")
+                        break
+
+            except Exception as e:
+                print(f"[Wakeword Error] {e}")
                 continue
-
-            if _contains_wakeword(audio):
-                print("[Wakeword] Detected! Triggering...")
-                wakeword_active = False  # Pause wakeword while processing
-                trigger_callback()
-                wakeword_active = True   # Resume after command handled
-                print("[Wakeword] Back to listening for 'Alpha'...")
-
-        except Exception as e:
-            print(f"[Wakeword Error] {e}")
-            continue
 
 
 def start_wake_word_detection(trigger_callback):
-    """Start listening for wake word in background thread"""
     global wakeword_thread, wakeword_active
     wakeword_active = True
     wakeword_thread = threading.Thread(
@@ -86,7 +64,6 @@ def start_wake_word_detection(trigger_callback):
 
 
 def stop_wake_word_detection():
-    """Stop wake word detection"""
     global wakeword_active
     wakeword_active = False
     print("[Wakeword] Stopped.")

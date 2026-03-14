@@ -1,62 +1,42 @@
-# 📂 modules/voice_listener.py
-
-import queue
-import threading
-import numpy as np
+﻿import numpy as np
 import sounddevice as sd
 from faster_whisper import WhisperModel
-from modules.speech_engine import speak
 
-# 🧠 Load Whisper model (only once)
-MODEL_SIZE = "base.en"
-model = WhisperModel(MODEL_SIZE, compute_type="auto")
+model = WhisperModel("base.en", device="cpu", compute_type="int8")
 
-# 🎧 Recording settings
 SAMPLE_RATE = 16000
-CHANNELS = 1
-CHUNK_DURATION = 5  # seconds
+CHUNK_DURATION = 5
 
-# Queue to hold audio chunks
-audio_queue = queue.Queue()
-
-def audio_callback(indata, frames, time, status):
-    if status:
-        print(f"[!] Audio Input Status: {status}")
-    audio_queue.put(indata.copy())
-
-def record_audio():
-    """Records audio for a fixed duration and returns as NumPy array"""
-    print("🎤 Listening...")
-    audio_data = []
-
-    with sd.InputStream(samplerate=SAMPLE_RATE, channels=CHANNELS, callback=audio_callback):
-        for _ in range(int(SAMPLE_RATE / 1024 * CHUNK_DURATION)):
-            audio_chunk = audio_queue.get()
-            audio_data.append(audio_chunk)
-
-    full_audio = np.concatenate(audio_data, axis=0)
-    return full_audio.squeeze()
-
-def transcribe_audio(audio_np):
-    """Transcribes NumPy audio input using faster-whisper"""
-    segments, _ = model.transcribe(audio_np, beam_size=5)
-    full_text = " ".join([seg.text for seg in segments])
-    return full_text.strip()
+HALLUCINATIONS = [
+    "thank you", "thanks for watching", "thanks for watching!",
+    "thank you for watching", "we'll see you in a minute",
+    "you", "bye", "the", "a", "uh", "um", "hmm", "."
+]
 
 def listen_for_command():
-    """Main callable function to capture, transcribe, and return voice input"""
     try:
-        audio_np = record_audio()
-        command_text = transcribe_audio(audio_np)
+        print("Listening...")
+        audio = sd.rec(int(CHUNK_DURATION * SAMPLE_RATE), samplerate=SAMPLE_RATE, channels=1, dtype='float32')
+        sd.wait()
+        audio_np = audio.squeeze()
 
-        if command_text:
-            print(f"🗣️ You said: {command_text}")
-            speak(f"You said: {command_text}")
-        else:
-            speak("Sorry, I didn't catch that.")
-        
-        return command_text
+        rms = float(np.sqrt(np.mean(audio_np**2)))
+        print(f"[RMS: {rms:.4f}]")
+        if rms < 0.01:
+            print("No speech detected.")
+            return ""
+
+        segments, _ = model.transcribe(audio_np, beam_size=5, language="en", no_speech_threshold=0.6)
+        text = " ".join([s.text for s in segments]).strip()
+
+        if text.lower().strip(" .!?,") in HALLUCINATIONS:
+            print(f"Filtered: '{text}'")
+            return ""
+
+        if text:
+            print(f"You said: {text}")
+        return text
+
     except Exception as e:
-        print(f"[❌ ERROR] Voice listening failed: {e}")
-        speak("Something went wrong while listening.")
+        print(f"[Voice Error] {e}")
         return ""
