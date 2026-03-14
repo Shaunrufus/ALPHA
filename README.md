@@ -1,111 +1,153 @@
-# ALPHA Voice Assistant
+﻿# ALPHA — Personal AI Voice Assistant
 
-A Python-based voice assistant with wake word detection, speech recognition, and text-to-speech capabilities.
+> A locally-running, voice-first AI assistant powered by Groq LLM, Kokoro TTS, and Whisper STT.
+> Works on desktop and mobile browser. Integrates with MightyLion for PC control via voice.
 
-## Features
+![Status](https://img.shields.io/badge/status-active-brightgreen)
+![Python](https://img.shields.io/badge/python-3.10+-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
 
-- 🎧 **Wake Word Detection**: Listens for "alpha" to activate
-- 🗣️ **Speech Recognition**: Uses faster-whisper for accurate transcription
-- 🔊 **Text-to-Speech**: Natural voice output using pyttsx3
-- 🧮 **Voice Commands**: Responds to basic commands like time, date, greetings
-- 🎤 **Real-time Audio Processing**: Continuous listening with VAD
+---
+
+## What ALPHA Can Do
+
+- 🎙️ Listen to your voice via mobile browser or desktop mic
+- 🧠 Understand and respond intelligently using Groq (llama-3.3-70b)
+- 🔊 Speak back using Kokoro neural TTS (natural voice)
+- 📱 Work from your phone via a Siri-style mobile web UI
+- 🖥️ Trigger PC actions (screenshot, open apps) via MightyLion integration
+- 💬 Remember conversation context across a session
+
+---
+
+## Tech Stack
+
+| Component | Technology |
+|-----------|-----------|
+| Speech-to-Text | faster-whisper |
+| Wake Word | openwakeword (hey_jarvis) |
+| LLM Brain | Groq — llama-3.3-70b-versatile |
+| Text-to-Speech | Kokoro ONNX (af_sarah voice) |
+| Fallback TTS | pyttsx3 |
+| API Server | Flask + Flask-CORS |
+| Mobile UI | Vanilla HTML/JS (Siri-style dark UI) |
+| PC Control | MightyLion PC Bridge (port 8765) |
+
+---
 
 ## Project Structure
-
 ```
 ALPHA/
+├── alpha_server.py          # Flask API server (port 8766)
+├── alpha_mobile.html        # Mobile web UI
 ├── app/
-│   ├── main.py              # Main application entry point
-│   ├── agent/               # AI agent modules (future)
-│   ├── llm/                 # Language model integration (future)
-│   ├── tts/                 # Text-to-speech modules (future)
-│   ├── stt/                 # Speech-to-text modules (future)
-│   ├── vad/                 # Voice activity detection (future)
-│   └── utils/               # Utility functions (future)
+│   └── main.py              # Desktop voice mode (wakeword + mic)
 ├── modules/
-│   ├── speech_engine.py     # TTS functionality
-│   ├── voice_listener.py    # STT with faster-whisper
-│   └── wakeword_listener.py # Wake word detection
-├── venv/                    # Virtual environment
-├── requirements.txt         # Python dependencies
-└── README.md               # This file
+│   ├── brain.py             # Groq LLM integration
+│   ├── speech_engine.py     # Kokoro TTS + pyttsx3 fallback
+│   ├── voice_listener.py    # Microphone input handler
+│   └── wakeword_listener.py # Hey Jarvis wakeword detection
+├── kokoro-v0_19.onnx        # TTS model (download separately)
+├── voices.bin               # TTS voices (download separately)
+├── .env                     # Your config (never committed)
+├── .env.example             # Template for setup
+└── requirements.txt         # Python dependencies
 ```
 
-## Installation
+---
 
-1. **Clone the repository** (if applicable)
-2. **Activate virtual environment**:
-   ```bash
-   .\venv\Scripts\activate  # Windows
-   source venv/bin/activate # Linux/Mac
-   ```
+## Quick Start
 
-3. **Install dependencies**:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-## Usage
-
-### Run the main application:
+### 1. Clone the repo
 ```bash
-python app/main.py
+git clone https://github.com/Shaunrufus/ALPHA.git
+cd ALPHA
 ```
 
-### Test individual components:
+### 2. Create virtual environment
 ```bash
-# Test speech synthesis
-python test_speak.py
-
-# Test wake word detection
-python test_wakeword.py
-
-# Test GPU-accelerated Whisper
-python test_gpu_whisper.py
+python -m venv venv_new
+venv_new\Scripts\activate
+pip install -r requirements.txt
 ```
 
-## How it Works
+### 3. Download TTS model files
+```bash
+curl -L -o kokoro-v0_19.onnx https://huggingface.co/thewh1teagle/Kokoro/resolve/main/kokoro-v0_19.onnx
+curl -L -o voices.bin https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/voices-v1.0.bin
+```
 
-1. **Wake Word Detection**: Continuously listens for "alpha"
-2. **Command Processing**: When wake word detected, listens for commands
-3. **Speech Recognition**: Transcribes audio using faster-whisper
-4. **Response Generation**: Processes commands and generates responses
-5. **Text-to-Speech**: Converts responses to speech
+### 4. Configure environment
+```bash
+copy .env.example .env
+# Edit .env and add your GROQ_API_KEY
+```
 
-## Dependencies
+### 5. Start ALPHA
+```bash
+venv_new\Scripts\python.exe alpha_server.py
+```
 
-- `pyttsx3`: Text-to-speech engine
-- `faster-whisper`: Fast speech recognition
-- `sounddevice`: Audio input/output
-- `numpy`: Numerical computing
-- `torch`: PyTorch for ML models
-- `librosa`: Audio processing
+Open http://localhost:8766 in your browser.
 
-## Troubleshooting
+---
 
-### Import Issues
-If you get import errors, make sure:
-1. Virtual environment is activated
-2. You're running from the project root directory
-3. All dependencies are installed
+## Environment Variables
 
-### Audio Issues
-- Check microphone permissions
-- Ensure audio drivers are working
-- Try different audio devices if available
+| Variable | Description |
+|----------|-------------|
+| GROQ_API_KEY | Your Groq API key (get free at console.groq.com) |
+| PC_BRIDGE_URL | MightyLion PC Bridge URL (default: http://localhost:8765) |
+| KOKORO_MODEL | Path to kokoro-v0_19.onnx |
+| KOKORO_VOICES | Path to voices.bin |
+| ALPHA_PORT | Server port (default: 8766) |
 
-### GPU Issues
-- Install CUDA if using GPU acceleration
-- Use CPU-only mode if GPU not available
+---
 
-## Future Enhancements
+## Mobile Access
 
-- [ ] Real wake word detection (currently simulated)
-- [ ] AI agent integration
-- [ ] More sophisticated command processing
-- [ ] Voice cloning capabilities
-- [ ] Multi-language support
+To use ALPHA from your phone:
+
+1. Run the server
+2. Create a tunnel: `cloudflared tunnel --url http://localhost:8766`
+3. Open the tunnel URL on your phone
+4. Press the mic button and speak
+
+HTTPS is required for microphone access on mobile — the Cloudflare tunnel handles this automatically.
+
+---
+
+## MightyLion Integration
+
+ALPHA connects to [MightyLion](https://github.com/Shaunrufus/mightylion) for PC control.
+Say commands like:
+- *"Take a screenshot"*
+- *"What's on my screen?"*
+- *"Open Chrome"*
+
+ALPHA detects the intent and forwards it to the MightyLion PC Bridge.
+
+---
+
+## Roadmap
+
+- [x] Voice input via browser mic
+- [x] Groq LLM brain
+- [x] Kokoro neural TTS
+- [x] Mobile web UI
+- [x] MightyLion PC control integration
+- [ ] Continuous voice mode (no push-to-talk)
+- [ ] Android lock screen widget
+- [ ] Oracle Cloud deployment (always-on)
+- [ ] Multi-user support
+- [ ] WhatsApp integration
+
+---
 
 ## License
 
-This project is for educational purposes.
+MIT License — free to use, modify, and distribute.
+
+---
+
+Built by [Shaun Rufus](https://github.com/Shaunrufus)
